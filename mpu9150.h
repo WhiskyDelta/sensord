@@ -31,10 +31,12 @@ typedef struct {
 	int16_t mag_x;
 	int16_t mag_y;
 	int16_t mag_z;
-	int16_t asa_x;
-	int16_t asa_y;
-	int16_t asa_z;
-	int16_t temp;
+	uint8_t asa_x;
+	uint8_t asa_y;
+	uint8_t asa_z;
+	uint8_t AFS_SEL;
+	uint8_t FS_SEL;
+	float temp;
 	bool present
 } t_mpu_9150;
 
