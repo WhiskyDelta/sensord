@@ -48,6 +48,7 @@
 #include "vario.h"
 #include "AirDensity.h"
 #include "24c16.h"
+#include "mpu9150.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
@@ -66,6 +67,7 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
+t_mpu9150 accel_sensor;
 	
 // configuration object
 t_config config;
@@ -319,7 +321,7 @@ void pressure_measurement_handler(void)
 			else
 			{
 				// of tep pressure
-				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
+				KalmanFilter1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
 			}
 			
 			// of dynamic pressure
@@ -555,7 +557,25 @@ int main (int argc, char **argv) {
 		//initialize voltage sensor
 		if(voltage_sensor.present)
 			ads1110_init(&voltage_sensor);
-		
+
+		// open acceleration, gyro sensor
+		if (mpu9150_open(&accel_sensor) != 0)
+		{
+			fprintf(stderr, "Open sensor failed !!\n");
+		}
+
+		//initialize accel sensor
+		mpu9150_init(&accel_sensor);
+
+		// open mag sensor
+		mpu9150_open_mag(&accel_sensor);
+
+		// initialize mag sensor
+		mpu9150_init_mag(&accel_sensor);
+
+		// start first mag measurement
+		mpu9150_start_mag(&accel_sensor);
+
 		// poll sensors for offset compensation
 		ms5611_start_temp(&static_sensor);
 		usleep(10000);
@@ -581,7 +601,7 @@ int main (int argc, char **argv) {
 	vkf.var_x_accel_ = config.vario_x_accel;
 	
 	for(i=0; i < 1000; i++)
-		KalmanFiler1d_update(&vkf, p_static/100, 0.25, 1);
+		KalmanFilter1d_update(&vkf, p_static/100, 0.25, 1);
 			
 	while(1)
 	{

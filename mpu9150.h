@@ -35,8 +35,8 @@ typedef struct {
 	float asa_x;
 	float asa_y;
 	float asa_z;
-	uint8_t AFS_SEL = 1;	//0: +-2g, 1: +-4g, 2:+-8g, 3:+-16g
-	uint8_t FS_SEL = 0;	//0: +-250°/s, 1: +-500°/s, 2: +-1000°/s, 3: +-2000°/s
+	uint8_t AFS_SEL;	//0: +-2g, 1: +-4g, 2:+-8g, 3:+-16g
+	uint8_t FS_SEL;		//0: +-250°/s, 1: +-500°/s, 2: +-1000°/s, 3: +-2000°/s
 	float temp;
 	bool present;
 } t_mpu9150;

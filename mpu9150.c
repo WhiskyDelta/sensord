@@ -48,6 +48,7 @@ int mpu9150_open(t_mpu9150 *sensor)
 
 	if (ioctl(fd, I2C_SLAVE, MPU9150_I2C_ADDRESS) < 0) {
 		fprintf(stderr, "ioctl error: %s\n", strerror(errno));
+		sensor->present = 0;
 		return (1);
 	}
 	else sensor->address = MPU9150_I2C_ADDRESS;
@@ -55,11 +56,13 @@ int mpu9150_open(t_mpu9150 *sensor)
 	if (!mpu9150_connected(sensor)) {
 		if (ioctl(fd, I2C_SLAVE, MPU9150_I2C_ALT_ADDRESS) < 0) {
 			fprintf(stderr, "ioctl error: %s\n", strerror(errno));
+			sensor->present = 0;
 			return (1);
 		}
 		else sensor->address = MPU9150_I2C_ALT_ADDRESS;
 	}
 
+	if (mpu9150_connected(sensor)) sensor->present = 1;
 	if (g_debug > 0) printf("Opened mpu9150 on 0x%x\n", sensor->address);
 	
 	// assign file handle to sensor object
