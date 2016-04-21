@@ -13,7 +13,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 #include "mpu9150_register_map.h"
-#include <stdint>
+#include <stdint.h>
+#include <stdbool.h>
 
 
 // define struct for MPU9150 sensor
@@ -37,8 +38,8 @@ typedef struct {
 	uint8_t AFS_SEL;
 	uint8_t FS_SEL;
 	float temp;
-	bool present
-} t_mpu_9150;
+	bool present;
+} t_mpu9150;
 
 
 // prototypes
