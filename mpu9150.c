@@ -69,8 +69,8 @@ int mpu9150_open(t_mpu9150 *sensor)
 
 int mpu9150_init(t_mpu9150 *sensor)
 {
-	sensor->FS_SEL = 0;		//set gyro range to +-250°/s
-	sensor->AFS_SEL = 1;		//set acc range to +-4g
+	//sensor->FS_SEL = 0;		//set gyro range to +-250°/s
+	//sensor->AFS_SEL = 1;		//set acc range to +-4g
 
 
 	uint8_t buf[2];
@@ -161,9 +161,9 @@ int mpu9150_read_data(t_mpu9150 *sensor)
 	sensor->acc_y = ((buf[2]<<8) + buf[3])*(sensor->AFS_SEL+1)/16384;		// g
 	sensor->acc_z = ((buf[4]<<8) + buf[5])*(sensor->AFS_SEL+1)/16384;		
 	sensor->temp = ((buf[6]<<8) + buf[7])/230+35;				// °C
-	sensor->gyr_x = ((buf[6]<<8) + buf[9])*(sensor->FS_SEL+1)/250;
-	sensor->gyr_y = ((buf[10]<<8) + buf[11])*(sensor->FS_SEL+1)/250;		// °/s
-	sensor->gyr_z = ((buf[12]<<8) + buf[13])*(sensor->FS_SEL+1)/250;		
+	sensor->gyr_x = ((buf[6]<<8) + buf[9])*(sensor->FS_SEL+1)/131;
+	sensor->gyr_y = ((buf[10]<<8) + buf[11])*(sensor->FS_SEL+1)/131;		// °/s
+	sensor->gyr_z = ((buf[12]<<8) + buf[13])*(sensor->FS_SEL+1)/131;		
 
 	return (0);
 }
@@ -198,6 +198,7 @@ int mpu9150_open_mag(t_mpu9150 *sensor)
 
 int mpu9150_init_mag(t_mpu9150 *sensor)
 {
+	//read sensitivity adjustment values and save them
 	uint8_t buf[3];
 	buf[0] = 0x03;								//address to write to, CNTL-register
 	buf[1] = 0b00001111;							//byte to write, fuse rom access mode
@@ -223,10 +224,10 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 		return(1);
 	}
 
-	//write in struct
-	sensor->asa_x = buf[0];
-	sensor->asa_y = buf[1];
-	sensor->asa_z = buf[2];
+	//write in struct, x and y swapped because of orientation 
+	sensor->asa_y = (buf[0]-128)/256 + 1;
+	sensor->asa_x = (buf[1]-128)/256 + 1;
+	sensor->asa_z = (buf[2]-128)/256 + 1;
 	return (0);
 }
 
@@ -262,10 +263,11 @@ int mpu9150_read_mag(t_mpu9150 *sensor)
 		return (2);							//Data error or magnetic sensor overflow
 	}
 	
-	//fuse bytes and write in struct
-	sensor->mag_x = buf[0]+(buf[1]<<8);
-	sensor->mag_y = buf[2]+(buf[3]<<8);
-	sensor->mag_z = buf[4]+(buf[5]<<8);
+	//fuse bytes and write in struct, order changed because orientation of
+	//mag differs to acc and gyro orientation
+	sensor->mag_y = (buf[0]+(buf[1]<<8))*sensor->asa_y;
+	sensor->mag_x = (buf[2]+(buf[3]<<8))*sensor->asa_x;
+	sensor->mag_z = -(buf[4]+(buf[5]<<8))*sensor->asa_z;
 	return (0);
 }
 

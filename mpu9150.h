@@ -23,20 +23,20 @@ typedef struct {
 	int fd_mag;
 	uint8_t address;
 	uint8_t address_mag;
-	int16_t acc_x;
-	int16_t acc_y;
-	int16_t acc_z;
-	int16_t gyr_x;
-	int16_t gyr_y;
-	int16_t gyr_z;
-	int16_t mag_x;
-	int16_t mag_y;
-	int16_t mag_z;
-	uint8_t asa_x;
-	uint8_t asa_y;
-	uint8_t asa_z;
-	uint8_t AFS_SEL;
-	uint8_t FS_SEL;
+	float acc_x;
+	float acc_y;
+	float acc_z;
+	float gyr_x;
+	float gyr_y;
+	float gyr_z;
+	float mag_x;
+	float mag_y;
+	float mag_z;
+	float asa_x;
+	float asa_y;
+	float asa_z;
+	uint8_t AFS_SEL = 1;	//0: +-2g, 1: +-4g, 2:+-8g, 3:+-16g
+	uint8_t FS_SEL = 0;	//0: +-250°/s, 1: +-500°/s, 2: +-1000°/s, 3: +-2000°/s
 	float temp;
 	bool present;
 } t_mpu9150;
