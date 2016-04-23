@@ -23,18 +23,12 @@ typedef struct {
 	int fd_mag;
 	uint8_t address;
 	uint8_t address_mag;
-	float acc_x;
-	float acc_y;
-	float acc_z;
-	float gyr_x;
-	float gyr_y;
-	float gyr_z;
-	float mag_x;
-	float mag_y;
-	float mag_z;
-	float asa_x;
-	float asa_y;
-	float asa_z;
+	float acc[3];
+	float gyr[3];
+	float mag[3];
+	float asa[3];
+	float hard_iron[3];
+	float soft_iron[3];
 	uint8_t AFS_SEL;	//0: +-2g, 1: +-4g, 2:+-8g, 3:+-16g
 	uint8_t FS_SEL;		//0: +-250°/s, 1: +-500°/s, 2: +-1000°/s, 3: +-2000°/s
 	float temp;

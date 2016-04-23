@@ -160,13 +160,20 @@ int mpu9150_read_data(t_mpu9150 *sensor)
 	}
 
 	//fuse bytes and write in struct
-	sensor->acc_x = ((buf[0]<<8) + buf[1])*(sensor->AFS_SEL+1)/16384;
-	sensor->acc_y = ((buf[2]<<8) + buf[3])*(sensor->AFS_SEL+1)/16384;		// g
-	sensor->acc_z = ((buf[4]<<8) + buf[5])*(sensor->AFS_SEL+1)/16384;		
+	int ii;	
+	for (ii = 0; ii < 3; ii++)
+	{
+		sensor->acc[ii] = ((buf[ii*2]<<8) + buf[(ii*2)+1])*(sensor->AFS_SEL+1)/16384;
+		sensor->gyr[ii] = ((buf[(ii*2)+8]<<8) + buf[(ii*2)+9])*(sensor->FS_SEL+1)/131;
+	}
+	
+	//sensor->acc_x = ((buf[0]<<8) + buf[1])*(sensor->AFS_SEL+1)/16384;
+	//sensor->acc_y = ((buf[2]<<8) + buf[3])*(sensor->AFS_SEL+1)/16384;		// g
+	//sensor->acc_z = ((buf[4]<<8) + buf[5])*(sensor->AFS_SEL+1)/16384;		
 	sensor->temp = ((buf[6]<<8) + buf[7])/230+35;				// °C
-	sensor->gyr_x = ((buf[6]<<8) + buf[9])*(sensor->FS_SEL+1)/131;
-	sensor->gyr_y = ((buf[10]<<8) + buf[11])*(sensor->FS_SEL+1)/131;		// °/s
-	sensor->gyr_z = ((buf[12]<<8) + buf[13])*(sensor->FS_SEL+1)/131;		
+	//sensor->gyr_x = ((buf[8]<<8) + buf[9])*(sensor->FS_SEL+1)/131;
+	//sensor->gyr_y = ((buf[10]<<8) + buf[11])*(sensor->FS_SEL+1)/131;		// °/s
+	//sensor->gyr_z = ((buf[12]<<8) + buf[13])*(sensor->FS_SEL+1)/131;		
 
 	return (0);
 }
@@ -228,9 +235,14 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 	}
 
 	//write in struct, x and y swapped because of orientation 
-	sensor->asa_y = (buf[0]-128)/256 + 1;
-	sensor->asa_x = (buf[1]-128)/256 + 1;
-	sensor->asa_z = (buf[2]-128)/256 + 1;
+	sensor->asa[1] = (buf[0]-128)/256 + 1;
+	sensor->asa[0] = (buf[1]-128)/256 + 1;
+	sensor->asa[2] = (buf[2]-128)/256 + 1;
+
+	//TODO read calibration values from file
+	memcpy(sensor->hard_iron, (float[3]){0,0,0}, 3);
+	memcpy(sensor->soft_iron, (float[3]){1,1,1}, 3);
+
 	return (0);
 }
 
@@ -268,10 +280,9 @@ int mpu9150_read_mag(t_mpu9150 *sensor)
 	
 	//fuse bytes and write in struct, order changed because orientation of
 	//mag differs to acc and gyro orientation
-	//TODO calibrate, handle offset
-	sensor->mag_y = (buf[0]+(buf[1]<<8))*sensor->asa_y;
-	sensor->mag_x = (buf[2]+(buf[3]<<8))*sensor->asa_x;
-	sensor->mag_z = -(buf[4]+(buf[5]<<8))*sensor->asa_z;
+	sensor->mag[1] =  (((buf[0]+(buf[1]<<8))*sensor->asa[1]) + sensor->hard_iron[1]) * sensor->soft_iron[1];
+	sensor->mag[0] =  (((buf[2]+(buf[3]<<8))*sensor->asa[0]) + sensor->hard_iron[0]) * sensor->soft_iron[0];
+	sensor->mag[2] = -(((buf[4]+(buf[5]<<8))*sensor->asa[2]) + sensor->hard_iron[2]) * sensor->soft_iron[2];
 	return (0);
 }
 

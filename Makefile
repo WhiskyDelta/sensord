@@ -3,7 +3,7 @@
 CFLAGS += -g -Wall
 EXECUTABLE = sensord sensorcal
 _OBJ = ms5611.o ams5915.o ads1110.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o 24c16.o mpu9150.o
-_OBJ_CAL = 24c16.o ams5915.o sensorcal.o
+_OBJ_CAL = 24c16.o ams5915.o sensorcal.o mpu9150.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 OBJ_CAL = $(patsubst %,$(ODIR)/%,$(_OBJ_CAL))
 LIBS = -lrt -lm
