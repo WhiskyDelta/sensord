@@ -268,6 +268,7 @@ int mpu9150_read_mag(t_mpu9150 *sensor)
 	
 	//fuse bytes and write in struct, order changed because orientation of
 	//mag differs to acc and gyro orientation
+	//TODO calibrate, handle offset
 	sensor->mag_y = (buf[0]+(buf[1]<<8))*sensor->asa_y;
 	sensor->mag_x = (buf[2]+(buf[3]<<8))*sensor->asa_x;
 	sensor->mag_z = -(buf[4]+(buf[5]<<8))*sensor->asa_z;
