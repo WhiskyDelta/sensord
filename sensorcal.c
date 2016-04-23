@@ -98,8 +98,11 @@ int calibrate_mag(float *dest1, float *dest2)
 	// initialize mag sensor
 	mpu9150_init_mag(&accel_sensor);
 
-	memcpy(accel_sensor.hard_iron, (float[3]){0,0,0}, 3);
-	memcpy(accel_sensor.soft_iron, (float[3]){1,1,1}, 3);
+	// initialize compensation factors to redefine them
+        float hard_init[3] = {0,0,0};
+        float soft_init[3] = {1,1,1};
+        memcpy(accel_sensor.hard_iron, hard_init, 3*sizeof(float));
+        memcpy(accel_sensor.soft_iron, soft_init, 3*sizeof(float));
 
 	printf("Mag Calibration: Wave device in a figure eight until done!");
 	usleep(4000000);
@@ -112,7 +115,7 @@ int calibrate_mag(float *dest1, float *dest2)
 	for(ii = 0; ii < sample_count; ii++)
 	{
 		mpu9150_read_mag(&accel_sensor);  // Read the mag data   
-		memcpy(mag_temp, accel_sensor.mag, 3);
+		memcpy(mag_temp, accel_sensor.mag, 3*sizeof(float));
 		for (jj = 0; jj < 3; jj++) 
 		{
 			if(mag_temp[jj] > mag_max[jj]) mag_max[jj] = mag_temp[jj];
@@ -127,7 +130,7 @@ int calibrate_mag(float *dest1, float *dest2)
 	mag_bias[1]  = (mag_max[1] + mag_min[1])/2;  // get average y mag bias in counts
 	mag_bias[2]  = (mag_max[2] + mag_min[2])/2;  // get average z mag bias in counts
 
-	memcpy(dest1, mag_bias, 3);  // save mag biases in G for main program  
+	memcpy(dest1, mag_bias, 3*sizeof(float));  // save mag biases in G for main program  
 
 	// Get soft iron correction estimate
 	mag_scale[0]  = (mag_max[0] - mag_min[0])/2;  // get average x axis max chord length in counts

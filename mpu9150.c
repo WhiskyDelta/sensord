@@ -41,6 +41,9 @@ int mpu9150_open(t_mpu9150 *sensor)
 	// try to open I2C Bus
 	fd = open("/dev/i2c-1", O_RDWR);
 	
+	// assign file handle to sensor object
+	sensor->fd = fd;
+
 	if (fd < 0) {
 		fprintf(stderr, "Error opening file: %s\n", strerror(errno));
 		return 1;
@@ -58,15 +61,14 @@ int mpu9150_open(t_mpu9150 *sensor)
 			fprintf(stderr, "ioctl error: %s\n", strerror(errno));
 			sensor->present = 0;
 			return (1);
+		} else {
+			sensor->address = MPU9150_I2C_ALT_ADDRESS;
+			sensor->present = 1;
 		}
-		else sensor->address = MPU9150_I2C_ALT_ADDRESS;
-	}
+	} else sensor->present = 1;
 
-	if (mpu9150_connected(sensor)) sensor->present = 1;
 	if (g_debug > 0) printf("Opened mpu9150 on 0x%x\n", sensor->address);
 	
-	// assign file handle to sensor object
-	sensor->fd = fd;
 	return (0);
 }
 
@@ -206,11 +208,31 @@ int mpu9150_open_mag(t_mpu9150 *sensor)
 	return (0);
 }
 
+int mpu9150_mag_connected(t_mpu9150 *sensor)
+{
+	uint8_t buf[2];	
+
+	buf[0] = 0x00;								//first address to read from
+	if ((write(sensor->fd_mag, buf, 1)) != 1) {				//write address to read from
+		printf("Error writing to i2c slave(%s)\n", __func__);
+		return(1);
+	}
+	if (read(sensor->fd_mag, buf, 2) != 2) {				// Read back data into buf[]
+		printf("Unable to read from slave(%s)\n", __func__);
+		return(1);
+	}
+	if (buf[0] != 0x48) {
+		printf("Not properly connected to magnetometer!\n");	
+		return FALSE;
+	}
+	return TRUE;
+}
+
 int mpu9150_init_mag(t_mpu9150 *sensor)
 {
 	//read sensitivity adjustment values and save them
 	uint8_t buf[3];
-	buf[0] = 0x03;								//address to write to, CNTL-register
+	buf[0] = 0x0A;								//address to write to, CNTL-register
 	buf[1] = 0b00001111;							//byte to write, fuse rom access mode
 	if ((write(sensor->fd_mag, buf, 2)) != 2) {
 		printf("Error writing to i2c slave(%s)\n", __func__);
@@ -227,21 +249,23 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 		return(1);
 	}
 
-	buf[0] = 0x03;								//address to write to, CNTL-register
+	//write in struct, x and y swapped because of orientation 
+	sensor->asa[1] = (buf[0]-128)/256 + 1;
+	sensor->asa[0] = (buf[1]-128)/256 + 1;
+	sensor->asa[2] = (buf[2]-128)/256 + 1;
+
+	buf[0] = 0x0A;								//address to write to, CNTL-register
 	buf[1] = 0b00000000;							//byte to write, power down mode
 	if ((write(sensor->fd_mag, buf, 2)) != 2) {
 		printf("Error writing to i2c slave(%s)\n", __func__);
 		return(1);
 	}
 
-	//write in struct, x and y swapped because of orientation 
-	sensor->asa[1] = (buf[0]-128)/256 + 1;
-	sensor->asa[0] = (buf[1]-128)/256 + 1;
-	sensor->asa[2] = (buf[2]-128)/256 + 1;
-
 	//TODO read calibration values from file
-	memcpy(sensor->hard_iron, (float[3]){0,0,0}, 3);
-	memcpy(sensor->soft_iron, (float[3]){1,1,1}, 3);
+	float hard_init[3] = {101.636719,-73.886719,133.712891};
+        float soft_init[3] = {0.938030,1.132728,0.951374};
+        memcpy(accel_sensor.hard_iron, hard_init, 3*sizeof(float));
+        memcpy(accel_sensor.soft_iron, soft_init, 3*sizeof(float));
 
 	return (0);
 }
@@ -249,7 +273,7 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 int mpu9150_start_mag(t_mpu9150 *sensor)
 {
 	uint8_t buf[2];
-	buf[0] = 0x03;								//address to write to, CNTL-register
+	buf[0] = 0x0A;								//address to write to, CNTL-register
 	buf[1] = 0b00000001;							//byte to write, single measurement mode
 	if ((write(sensor->fd_mag, buf, 2)) != 2) {
 		printf("Error writing to i2c slave(%s)\n", __func__);
