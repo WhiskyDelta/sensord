@@ -13,8 +13,14 @@
 */
 
 //define struct
+
+#include <sys/time.h>
+
 typedef struct {
-	
+	int counter;
+	struct timeval start;
+	struct timeval current;
+	int dt; //mikroseconds
 } t_ukf_handler;
 
 //prototypes

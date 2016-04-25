@@ -165,14 +165,16 @@ int mpu9150_read_data(t_mpu9150 *sensor)
 	int ii;	
 	for (ii = 0; ii < 3; ii++)
 	{
-		sensor->acc[ii] = ((buf[ii*2]<<8) + buf[(ii*2)+1])*(sensor->AFS_SEL+1)/16384;
-		sensor->gyr[ii] = ((buf[(ii*2)+8]<<8) + buf[(ii*2)+9])*(sensor->FS_SEL+1)/131;
+		sensor->acc[ii] = ((int16_t)((buf[ ii*2   ]<<8) + buf[(ii*2)+1])) * (sensor->AFS_SEL+1)/16384.0;
+		sensor->gyr[ii] = ((int16_t)((buf[(ii*2)+8]<<8) + buf[(ii*2)+9])) * (sensor->FS_SEL+1)/131.0;
 	}
 	
+			
+	sensor->temp = ((buf[6]<<8) + buf[7])/230+35;				// °C
+	sensor->new_data = TRUE;
 	//sensor->acc_x = ((buf[0]<<8) + buf[1])*(sensor->AFS_SEL+1)/16384;
 	//sensor->acc_y = ((buf[2]<<8) + buf[3])*(sensor->AFS_SEL+1)/16384;		// g
-	//sensor->acc_z = ((buf[4]<<8) + buf[5])*(sensor->AFS_SEL+1)/16384;		
-	sensor->temp = ((buf[6]<<8) + buf[7])/230+35;				// °C
+	//sensor->acc_z = ((buf[4]<<8) + buf[5])*(sensor->AFS_SEL+1)/16384;
 	//sensor->gyr_x = ((buf[8]<<8) + buf[9])*(sensor->FS_SEL+1)/131;
 	//sensor->gyr_y = ((buf[10]<<8) + buf[11])*(sensor->FS_SEL+1)/131;		// °/s
 	//sensor->gyr_z = ((buf[12]<<8) + buf[13])*(sensor->FS_SEL+1)/131;		
@@ -208,7 +210,7 @@ int mpu9150_open_mag(t_mpu9150 *sensor)
 	return (0);
 }
 
-int mpu9150_mag_connected(t_mpu9150 *sensor)
+bool mpu9150_mag_connected(t_mpu9150 *sensor)
 {
 	uint8_t buf[2];	
 
@@ -250,9 +252,9 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 	}
 
 	//write in struct, x and y swapped because of orientation 
-	sensor->asa[1] = (buf[0]-128)/256 + 1;
-	sensor->asa[0] = (buf[1]-128)/256 + 1;
-	sensor->asa[2] = (buf[2]-128)/256 + 1;
+	sensor->asa[1] = (buf[0]-128)/256.0 + 1;
+	sensor->asa[0] = (buf[1]-128)/256.0 + 1;
+	sensor->asa[2] = (buf[2]-128)/256.0 + 1;
 
 	buf[0] = 0x0A;								//address to write to, CNTL-register
 	buf[1] = 0b00000000;							//byte to write, power down mode
@@ -263,9 +265,9 @@ int mpu9150_init_mag(t_mpu9150 *sensor)
 
 	//TODO read calibration values from file
 	float hard_init[3] = {101.636719,-73.886719,133.712891};
-        float soft_init[3] = {0.938030,1.132728,0.951374};
-        memcpy(accel_sensor.hard_iron, hard_init, 3*sizeof(float));
-        memcpy(accel_sensor.soft_iron, soft_init, 3*sizeof(float));
+	float soft_init[3] = {0.938030,1.132728,0.951374};
+	memcpy(sensor->hard_iron, hard_init, 3*sizeof(float));
+	memcpy(sensor->soft_iron, soft_init, 3*sizeof(float));
 
 	return (0);
 }
@@ -304,9 +306,10 @@ int mpu9150_read_mag(t_mpu9150 *sensor)
 	
 	//fuse bytes and write in struct, order changed because orientation of
 	//mag differs to acc and gyro orientation
-	sensor->mag[1] =  (((buf[0]+(buf[1]<<8))*sensor->asa[1]) + sensor->hard_iron[1]) * sensor->soft_iron[1];
-	sensor->mag[0] =  (((buf[2]+(buf[3]<<8))*sensor->asa[0]) + sensor->hard_iron[0]) * sensor->soft_iron[0];
-	sensor->mag[2] = -(((buf[4]+(buf[5]<<8))*sensor->asa[2]) + sensor->hard_iron[2]) * sensor->soft_iron[2];
+	sensor->mag[1] =  (( ((int16_t)(buf[0]+(buf[1]<<8))) *sensor->asa[1]) + sensor->hard_iron[1]) * sensor->soft_iron[1];
+	sensor->mag[0] =  (( ((int16_t)(buf[2]+(buf[3]<<8))) *sensor->asa[0]) + sensor->hard_iron[0]) * sensor->soft_iron[0];
+	sensor->mag[2] = -(( ((int16_t)(buf[4]+(buf[5]<<8))) *sensor->asa[2]) + sensor->hard_iron[2]) * sensor->soft_iron[2];
+	sensor->new_mag_data = TRUE;
 	return (0);
 }
 

@@ -17,8 +17,11 @@
 #include <stdint.h>
 
 
-int ukf_handler_init(t_ukf_handler *)
+int ukf_handler_init(t_ukf_handler *handler)
 {
+	handler->dt = 2000;
+	handler->counter = 0;
+
 	//set dynamic model
 	//TODO better custom model?
 	ukf_choose_dynamics(UKF_MODEL_CENTRIPETAL);
@@ -63,18 +66,49 @@ int ukf_handler_init(t_ukf_handler *)
 	return (0);
 }
 
-int ukf_handler_set_measurements(t_ukf_handler *)
+int ukf_handler_set_measurements(t_ukf_handler *handler)
 {
 	//clear previous measurements
-	//set available measurements
+	ukf_sensor_clear();
+
+	// do every time
+	// get and set accelerometer and gyroscope data
+	ukf_sensor_set_accelerometer(real_t x, real_t y, real_t z);
+	ukf_sensor_set_gyroscope(real_t x, real_t y, real_t z)
+	
+	if (handler->counter%(10/handler->dt) == 0) {	//do every 10ms
+		// get and set and restart magnetometer
+		ukf_sensor_set_magnetometer(real_t x, real_t y, real_t z);
+	}
+
+	if (handler->counter%(125/handler->dt) == 0) {	//do every 125ms
+		// get and calculate and set pressure data
+		ukf_sensor_set_pitot_tas(real_t tas)
+		ukf_sensor_set_barometer_amsl(real_t amsl)
+	}
+	
+	if (handler->counter%(1000/handler->dt) == 0) {	//do every second
+		//get and set gps data
+		ukf_sensor_set_gps_position(real_t lat, real_t lon, real_t alt);
+		ukf_sensor_set_gps_velocity(real_t x, real_t y, real_t z);
+		//send nmea
+
+		handler->counter = 0;
+	}
+	handler->counter++;
 	return (0);
 }
 
-int ukf_handler_advance_timestep(t_ukf_handler *,float)
+int ukf_handler_advance_timestep(t_ukf_handler *handler)
 {
-	//wait until desired dT
 	//advance state in time
 	//(get new state)
+	//wait until desired dT
+	gettimeofday(current, NULL);
+	suseconds_t dt = handler->current.tv_usec - handler->start.tv_usec;
+	int diff = dt - handler->dt;
+	if (diff > 120) usleep(diff-120); //TODO replace with nanosleep(), usleep() will be removed with POSIX.1-2008
+	gettimeofday(start, NULL);
 	return (0);
 }
 

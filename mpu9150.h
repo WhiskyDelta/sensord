@@ -33,6 +33,8 @@ typedef struct {
 	uint8_t FS_SEL;		//0: +-250°/s, 1: +-500°/s, 2: +-1000°/s, 3: +-2000°/s
 	float temp;
 	bool present;
+	bool new_data;
+	bool new_mag_data;
 } t_mpu9150;
 
 
