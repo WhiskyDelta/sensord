@@ -15,16 +15,20 @@
 //define struct
 
 #include <sys/time.h>
+#include "ms5611.h"
+#include "ams5915.h"
+#include "mpu9150.h"
 
 typedef struct {
 	int counter;
 	struct timeval start;
 	struct timeval current;
 	int dt; //mikroseconds
+	float QNH;
 } t_ukf_handler;
 
 //prototypes
-int ukf_handler_init(t_ukf_handler *);
-int ukf_handler_set_measurements(t_ukf_handler *);
-int ukf_handler_advance_timestep(t_ukf_handler *,float);
+int ukf_handler_init(t_ukf_handler *, t_mpu9150 *, t_ams5915 *, t_ms5611 *);
+int ukf_handler_set_measurements(t_ukf_handler *, t_mpu9150 *, t_ams5915 *, t_ms5611 *);
+int ukf_handler_advance_timestep(t_ukf_handler *);
 
