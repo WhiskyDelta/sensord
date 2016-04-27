@@ -67,6 +67,20 @@ int ukf_handler_init(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 
 	ukf_set_params(&params);
 	
 	//TODO set initial state
+	struct ukf_state_t intial = {
+	{0,0,0},	//position, from gps
+	{0,0,0},	//velocity, 0
+	{0,0,0},	//acceleration, 0
+	{0,0,0,1},	//attitude, to be calculated from mag
+	{0,0,0},	//angular velocity, 0
+	{0,0,0},	//angular acceleration, 0
+	{0,0,0},	//wind velocity, 0
+	{0,0,0}};	//gyro bias, gyro reading while standing still
+	
+	memcpy(initial.gyro_bias, accel_sensor->gyr, 3*sizeof(float));
+	ukf_set_state(&initial);
+
+	
 	//QNH = p * e^(h*g/(R*288.15K))
 	return (0);
 }

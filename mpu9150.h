@@ -13,6 +13,7 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 #include "mpu9150_register_map.h"
+#include "def.h"
 #include <stdint.h>
 #include <stdbool.h>
 
