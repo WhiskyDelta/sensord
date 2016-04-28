@@ -390,9 +390,9 @@ int main (int argc, char **argv) {
 	struct sigaction sigact;
 	
 	// socket communication
-	int sock;
-	struct sockaddr_in server;
-	
+	int sock, ret, broadcastEnable = 1;
+	struct sockaddr_in broadcast_addr;
+
 	// initialize variables
 	static_sensor.offset = 0.0;
 	static_sensor.linearity = 1.0;
@@ -608,6 +608,7 @@ int main (int argc, char **argv) {
 		// reset sock_err variables
 		sock_err = 0;
 		
+		/*
 		// Open Socket for TCP/IP communication
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock == -1)
@@ -622,7 +623,27 @@ int main (int argc, char **argv) {
 			fprintf(stderr, "failed to connect, trying again\n");
 			fflush(stdout);
 			sleep(1);
+		}*/
+
+		sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+		ret=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+		if (ret) {
+			perror("set broadcast mode");
+			close(sock);
+			return -1;
 		}
+
+		struct sockaddr_in broadcast_addr;
+
+		memset(&broadcast_addr, 0, sizeof(broadcast_addr));
+
+		//broadcast_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		inet_pton(AF_INET, "255.255.255.255", &broadcast_addr.sin_addr);
+		broadcast_addr.sin_port        = htons(4353);
+		broadcast_addr.sin_family      = AF_INET;
+
+		connect(sock, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
 				
 		// socket connected
 		// main data acquisition loop

@@ -167,7 +167,7 @@ int mpu9150_read_data(t_mpu9150 *sensor)
 	int ii;	
 	for (ii = 0; ii < 3; ii++)
 	{
-		sensor->acc[ii] = ((int16_t)((buf[ ii*2   ]<<8) + buf[(ii*2)+1])) * (sensor->AFS_SEL+1)/16384.0;	//m/s²
+		sensor->acc[ii] = ((int16_t)((buf[ ii*2   ]<<8) + buf[(ii*2)+1])) * (sensor->AFS_SEL+1)*9.81/1000/16384.0;	//m/s²
 		sensor->gyr[ii] = ((int16_t)((buf[(ii*2)+8]<<8) + buf[(ii*2)+9])) * (sensor->FS_SEL+1)*M_PI/180.0/131.0;//rad/s
 	}
 	
