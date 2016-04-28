@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <unistd.h>
+#include <string.h>
 #include "def.h"
 
 
@@ -67,7 +68,7 @@ int ukf_handler_init(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 
 	ukf_set_params(&params);
 	
 	//TODO set initial state
-	struct ukf_state_t intial = {
+	struct ukf_state_t initial = {
 	{0,0,0},	//position, from gps
 	{0,0,0},	//velocity, 0
 	{0,0,0},	//acceleration, 0
