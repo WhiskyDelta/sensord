@@ -67,7 +67,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 	if ((static_pressure < 0) || (static_pressure > 2000))
 	{
 		static_pressure = 9999;
-		success = 10;
+		success = -10;
 	}
 	
 	// check dynamic_pressure input value for validity
@@ -75,7 +75,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 	if ((dynamic_pressure < -999.0) || (dynamic_pressure > 9998.0))
 	{
 		dynamic_pressure = 9999;
-		success = 20;
+		success = -20;
 	}
 
 	// compose NMEA String
@@ -122,7 +122,7 @@ int Compose_Pressure_POV_fast(char *sentence, float te_vario)
 	if ((te_vario < -50) || (te_vario > 50))
 	{
 		te_vario = 99;
-		success = 10;
+		success = -10;
 	}
 	
 	// compose NMEA String
@@ -169,7 +169,7 @@ int Compose_Voltage_POV(char *sentence, float voltage)
 	if ((voltage < 2.) || (voltage > 20.))
 	{
 		voltage = 0.;
-		success = 10;
+		success = -10;
 	}
 	
 	// compose NMEA String
@@ -194,7 +194,7 @@ int Compose_Voltage_POV(char *sentence, float voltage)
 
 unsigned char NMEA_checksum(char *string)
 {
-  unsigned char value=0;
+	unsigned char value=0;
 	int i=1;
 	int l;
 	
@@ -202,7 +202,7 @@ unsigned char NMEA_checksum(char *string)
 	
 	for (; i < l; i++)
 	{
-    value ^= string[i];
-  }
-  return value;
+		value ^= string[i];
+	}
+	return value;
 }

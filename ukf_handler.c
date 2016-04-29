@@ -18,6 +18,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 #include "def.h"
 
 
@@ -69,7 +70,7 @@ int ukf_handler_init(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 
 	
 	//TODO set initial state
 	struct ukf_state_t initial = {
-	{0,0,0},	//position, from gps
+	{49.719556*M_PI/180.0, 8.743632*M_PI/180.0,370.0},	//position, from gps
 	{0,0,0},	//velocity, 0
 	{0,0,0},	//acceleration, 0
 	{0,0,0,1},	//attitude, to be calculated from mag
@@ -86,7 +87,7 @@ int ukf_handler_init(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 
 	return (0);
 }
 
-int ukf_handler_set_measurements(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 *dynamic_sensor, t_ms5611 *static_sensor)
+int ukf_handler(t_ukf_handler *handler, t_mpu9150 *accel_sensor, t_ams5915 *dynamic_sensor, t_ms5611 *static_sensor, t_ads1110 *voltage_sensor, int (*sendFunction)(char*,int))
 {
 	//clear previous measurements
 	ukf_sensor_clear();
@@ -97,36 +98,57 @@ int ukf_handler_set_measurements(t_ukf_handler *handler, t_mpu9150 *accel_sensor
 	ukf_sensor_set_accelerometer((real_t)accel_sensor->acc[0],(real_t)accel_sensor->acc[1],(real_t)accel_sensor->acc[2]);
 	ukf_sensor_set_gyroscope((real_t)accel_sensor->gyr[0],(real_t)accel_sensor->gyr[1],(real_t)accel_sensor->gyr[2]);
 	
-	if (handler->counter%(10/handler->dt) == 0) {	//do every 10ms
+	if (handler->counter%(10000/handler->dt) == 0) {	//do every 10ms
 		// get and set and restart magnetometer
-		ukf_sensor_set_magnetometer((real_t)accel_sensor->mag[0],(real_t)accel_sensor->mag[1],(real_t)accel_sensor->mag[2]);
-	}
+		mpu9150_read_mag(accel_sensor);
 
-	if (handler->counter%(125/handler->dt) == 0) {	//do every 125ms
-		// get and calculate and set pressure data
+		// read pressure values
+		ms5611_read_pressure(static_sensor);
+							
+		// read AMS5915
+		ams5915_measure(dynamic_sensor);
+		ams5915_calculate(dynamic_sensor);
+
+		// get and calculate and set pressure and magnetometer data
 		//TAS = sqrt(2 * q / ρ), ρ = p/RT 
 		ukf_sensor_set_pitot_tas((real_t)( sqrt(2 * dynamic_sensor->p * R_AIR * dynamic_sensor->T / static_sensor->p) ));
 		//AMSL = (R * 288.15K / g) * ln(QNH / p)
 		ukf_sensor_set_barometer_amsl((real_t)( (R_AIR * 288.15 / 9.81) * (log(handler->QNH / static_sensor->p)) ));
+		ukf_sensor_set_magnetometer((real_t)accel_sensor->mag[0],(real_t)accel_sensor->mag[1],(real_t)accel_sensor->mag[2]);		
+
+		// start new pressure measurement
+		ms5611_start_pressure(static_sensor);
+		
+		// start new magnetometer measurement		
+		mpu9150_start_mag(accel_sensor);
 	}
 	
-	if (handler->counter%(1000/handler->dt) == 0) {	//do every second
+	if (handler->counter%(500000/handler->dt) == 0) {	//do every half second
 		//get and set gps data
 		//ukf_sensor_set_gps_position(real_t lat, real_t lon, real_t alt);
 		//ukf_sensor_set_gps_velocity(real_t x, real_t y, real_t z);
+
+		// read ADS1110
+		if(voltage_sensor->present)
+		{
+			ads1110_measure(voltage_sensor);
+			ads1110_calculate(voltage_sensor);
+		}
+
 		//send nmea
+		ukf_get_state(&handler->state);
+		handler->message_length = sprintf(handler->message,"w:%f x:%f y:%f z:%f",handler->state.attitude[3] ,handler->state.attitude[0] ,handler->state.attitude[1] ,handler->state.attitude[2]);
+		handler->sock_err = (*sendFunction)(handler->message, handler->message_length);
 
 		handler->counter = 0;
 	}
 	handler->counter++;
-	return (0);
-}
-
-int ukf_handler_advance_timestep(t_ukf_handler *handler)
-{
+	
 	//advance state in time
 	//(get new state)
 	//wait until desired dT
+	ukf_iterate(handler->dt/1000000.0, 0);
+
 	gettimeofday(&handler->current, NULL);
 	suseconds_t dt = handler->current.tv_usec - handler->start.tv_usec;
 	int diff = dt - handler->dt;
@@ -134,7 +156,7 @@ int ukf_handler_advance_timestep(t_ukf_handler *handler)
 		usleep(diff - 120); //TODO replace with nanosleep(), usleep() will be removed with POSIX.1-2008
 	}
 	gettimeofday(&handler->start, NULL);
-	return (0);
+	return (handler->sock_err);	
 }
 
 //maybe implement state getter (propably not)

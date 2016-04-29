@@ -49,6 +49,7 @@
 #include "AirDensity.h"
 #include "24c16.h"
 #include "mpu9150.h"
+#include "ukf_handler.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
@@ -61,6 +62,7 @@
 timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
+int g_sock=-1;
 
 // Sensor objects
 t_ms5611 static_sensor;
@@ -74,6 +76,7 @@ t_config config;
 
 // Filter objects
 t_kalmanfilter1d vkf;
+t_ukf_handler ukf;
 	
 // pressures
 float tep;
@@ -95,6 +98,9 @@ FILE *fp_config=NULL;
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
+
+// function prototype
+int sendFunction (char*, int);
 
 /**
 * @brief Signal handler if sensord will be interrupted
@@ -167,7 +173,7 @@ int NMEA_message_handler(int sock)
 				result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
+				if (result < 0)
 				{
 					printf("POV slow NMEA Result = %d\n",result);
 				}	
@@ -190,7 +196,7 @@ int NMEA_message_handler(int sock)
 				result = Compose_Pressure_POV_fast(&s[0], vario);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
+				if (result < 0)
 				{
 					printf("POV fast NMEA Result = %d\n",result);
 				}	
@@ -210,7 +216,7 @@ int NMEA_message_handler(int sock)
 				result = Compose_Voltage_POV(&s[0], voltage_sensor.voltage_converted);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
+				if (result < 0)
 				{
 					printf("POV voltage NMEA Result = %d\n",result);
 				}	
@@ -390,7 +396,7 @@ int main (int argc, char **argv) {
 	struct sigaction sigact;
 	
 	// socket communication
-	int sock, ret, broadcastEnable = 1;
+	int ret, broadcastEnable = 1;
 	struct sockaddr_in broadcast_addr;
 
 	// initialize variables
@@ -405,6 +411,11 @@ int main (int argc, char **argv) {
 	
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
+
+	accel_sensor.FS_SEL = 0;	//accel range +-4g
+	accel_sensor.AFS_SEL = 1;	//gyro range +-250°/s
+
+	ukf.QNH = 101325.0;
 	
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
@@ -625,12 +636,12 @@ int main (int argc, char **argv) {
 			sleep(1);
 		}*/
 
-		sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		g_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-		ret=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+		ret=setsockopt(g_sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
 		if (ret) {
 			perror("set broadcast mode");
-			close(sock);
+			close(g_sock);
 			return -1;
 		}
 
@@ -643,12 +654,12 @@ int main (int argc, char **argv) {
 		broadcast_addr.sin_port        = htons(4353);
 		broadcast_addr.sin_family      = AF_INET;
 
-		connect(sock, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
+		connect(g_sock, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
 				
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
-		{	int result;
+		{	/*int result;
 		
 			result = usleep(12500);
 			if (result != 0)
@@ -657,15 +668,22 @@ int main (int argc, char **argv) {
 				usleep(12500);
 			}
 			pressure_measurement_handler();
-			sock_err = NMEA_message_handler(sock);
+			sock_err = NMEA_message_handler(sock);*/
+			sock_err = ukf_handler(&ukf, &accel_sensor, &dynamic_sensor, &static_sensor, &voltage_sensor, &sendFunction);
 		
 		} // while(1)
 		
 		// connection dropped
-		close(sock);
+		close(g_sock);
 	}
 	return 0;
-}	
+}
+
+int sendFunction (char* data, int length)
+{
+	debug_print("Packet sent:\n%s",data);
+	return send(g_sock, data, length, 0);
+}
 
 void print_runtime_config(void)
 {

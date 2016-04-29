@@ -18,6 +18,8 @@
 #include "ms5611.h"
 #include "ams5915.h"
 #include "mpu9150.h"
+#include "ads1110.h"
+#include "cukf.h"
 
 typedef struct {
 	int counter;
@@ -25,10 +27,13 @@ typedef struct {
 	struct timeval current;
 	int dt; //mikroseconds
 	float QNH;
+	char message[2048];
+	int message_length;
+	int sock_err;
+	struct ukf_state_t state;
 } t_ukf_handler;
 
 //prototypes
 int ukf_handler_init(t_ukf_handler *, t_mpu9150 *, t_ams5915 *, t_ms5611 *);
-int ukf_handler_set_measurements(t_ukf_handler *, t_mpu9150 *, t_ams5915 *, t_ms5611 *);
-int ukf_handler_advance_timestep(t_ukf_handler *);
+int ukf_handler(t_ukf_handler *, t_mpu9150 *, t_ams5915 *, t_ms5611 *, t_ads1110 *, int(*sendFunction)(char*, int));
 
